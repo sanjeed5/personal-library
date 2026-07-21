@@ -16,10 +16,18 @@ const statusLabels = {
   paused: 'Paused',
   dnf: 'Did not finish',
 };
-const searchable = [data.title, data.author, data.series, ...data.subjects].filter(Boolean).join(' ').toLowerCase();
+const searchable = [
+  data.title,
+  data.author,
+  ...data.additionalAuthors,
+  data.series,
+  data.publisher,
+  ...data.shelves,
+  ...data.subjects,
+].filter(Boolean).join(' ').toLowerCase();
 ---
 
-<article class="book-card" data-book-card data-status={data.status} data-search={searchable}>
+<article class="book-card" data-book-card data-status={data.status} data-media={data.mediaType} data-search={searchable}>
   <a class="book-card-cover" href={`/books/${data.slug}/`} aria-label={`View ${data.title}`}>
     <BookCover title={data.title} author={data.author} coverUrl={data.coverUrl} eager={eager} />
   </a>

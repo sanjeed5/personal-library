@@ -33,11 +33,13 @@ npm run preview
 Export your library from Goodreads, then run:
 
 ```bash
-npm run import:goodreads -- ~/Downloads/goodreads_library_export.csv
+npm run import:goodreads -- ~/Downloads/goodreads_library_export.csv --replace
 npm run enrich
 npm run check
 npm run build
 ```
+
+Use `--replace` for a fresh Goodreads export so books removed from Goodreads do not remain as stale manual entries. Omit it when you intentionally keep books added directly to `books.json`.
 
 Preview an import without writing data:
 

@@ -4,11 +4,14 @@ import BookCard from '../components/BookCard.astro';
 import Layout from '../layouts/Layout.astro';
 
 const books = (await getCollection('books', ({ data }) => data.visibility))
-  .sort((a, b) => Number(b.data.featured) - Number(a.data.featured) || a.data.title.localeCompare(b.data.title));
+  .sort((a, b) => Number(b.data.featured) - Number(a.data.featured)
+    || (b.data.dateAdded ?? '').localeCompare(a.data.dateAdded ?? '')
+    || a.data.title.localeCompare(b.data.title));
 
 const readingCount = books.filter((book) => book.data.status === 'currently-reading').length;
 const readCount = books.filter((book) => book.data.status === 'read').length;
 const wantCount = books.filter((book) => book.data.status === 'want-to-read').length;
+const mangaCount = books.filter((book) => book.data.mediaType === 'manga').length;
 ---
 
 <Layout>
@@ -37,6 +40,7 @@ const wantCount = books.filter((book) => book.data.status === 'want-to-read').le
           <button class="filter-button" type="button" data-filter="currently-reading" aria-pressed="false">Reading {readingCount}</button>
           <button class="filter-button" type="button" data-filter="want-to-read" aria-pressed="false">Want to read {wantCount}</button>
           <button class="filter-button" type="button" data-filter="read" aria-pressed="false">Read {readCount}</button>
+          <button class="filter-button" type="button" data-filter="manga" aria-pressed="false">Manga {mangaCount}</button>
         </div>
       </div>
 
@@ -63,7 +67,9 @@ const wantCount = books.filter((book) => book.data.status === 'want-to-read').le
     let visible = 0;
 
     for (const card of cards) {
-      const matchesFilter = activeFilter === 'all' || card.dataset.status === activeFilter;
+      const matchesFilter = activeFilter === 'all'
+        || card.dataset.status === activeFilter
+        || (activeFilter === 'manga' && card.dataset.media === 'manga');
       const matchesSearch = !query || card.dataset.search?.includes(query);
       card.hidden = !(matchesFilter && matchesSearch);
       if (!card.hidden) visible += 1;

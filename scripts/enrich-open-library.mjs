@@ -20,10 +20,16 @@ if (!Number.isFinite(limit) && limit !== Infinity) {
 const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
 
 function cleanSubjects(subjects = []) {
-  const blockedPrefixes = ['nyt:', 'nyt_', 'accessible book', 'protected daisy'];
+  const blockedPrefixes = [
+    'nyt:', 'nyt_', 'accessible book', 'protected daisy',
+    'series:', 'franchise:', 'prize:',
+  ];
   return [...new Set(subjects
     .map((subject) => String(subject).trim())
-    .filter((subject) => subject && !blockedPrefixes.some((prefix) => subject.toLowerCase().startsWith(prefix))))]
+    .filter((subject) => subject && !blockedPrefixes.some((prefix) => subject.toLowerCase().startsWith(prefix)))
+    .map((subject) => subject.replace(/^(genre|form):/i, '').trim())
+    .filter(Boolean)
+    .map((subject) => subject[0].toUpperCase() + subject.slice(1)))]
     .slice(0, 8);
 }
 

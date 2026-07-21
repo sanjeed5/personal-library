@@ -46,6 +46,7 @@ const jsonLd = {
         <p class="eyebrow">{statusLabels[data.status]}</p>
         <h1>{data.title}</h1>
         <p class="book-detail-author">by {data.author}</p>
+        {data.additionalAuthors.length ? <p class="book-detail-series">with {data.additionalAuthors.join(', ')}</p> : null}
         {data.series ? <p class="book-detail-series">{data.series}{data.seriesPosition ? `, book ${data.seriesPosition}` : ''}</p> : null}
 
         {data.description ? <p class="book-description">{data.description}</p> : null}
@@ -56,6 +57,8 @@ const jsonLd = {
           {data.rating ? <div><dt>My rating</dt><dd>{data.rating} / 5</dd></div> : null}
           {data.dateRead ? <div><dt>Finished</dt><dd>{data.dateRead}</dd></div> : null}
           {data.isbn13 ? <div><dt>ISBN</dt><dd>{data.isbn13}</dd></div> : null}
+          {data.format ? <div><dt>Format</dt><dd>{data.format}</dd></div> : null}
+          {data.publisher ? <div><dt>Publisher</dt><dd>{data.publisher}</dd></div> : null}
         </dl>
 
         {data.subjects.length ? <ul class="subject-list" aria-label="Genres">{data.subjects.map((subject) => <li>{subject}</li>)}</ul> : null}
@@ -63,6 +66,7 @@ const jsonLd = {
         {data.review ? <section class="book-review"><h2>Notes</h2><p>{data.review}</p></section> : null}
 
         {data.openLibraryUrl ? <p class="back-link"><a href={data.openLibraryUrl}>View metadata on Open Library</a></p> : null}
+        {data.goodreadsId ? <p><a class="back-link" href={`https://www.goodreads.com/book/show/${data.goodreadsId}`}>View on Goodreads</a></p> : null}
         <p><a class="back-link" href="/">← Back to the library</a></p>
       </div>
     </article>

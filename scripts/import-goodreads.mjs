@@ -10,14 +10,33 @@ const outputPath = process.env.BOOKS_FILE
   ? resolve(process.env.BOOKS_FILE)
   : resolve(projectRoot, 'src/data/books.json');
 const dryRun = process.argv.includes('--dry-run');
+const replaceCatalog = process.argv.includes('--replace');
 
 if (!sourcePath) {
-  console.error('Usage: npm run import:goodreads -- /path/to/goodreads_library_export.csv [--dry-run]');
+  console.error('Usage: npm run import:goodreads -- /path/to/goodreads_library_export.csv [--dry-run] [--replace]');
   process.exit(1);
 }
 
 function cleanText(value) {
-  return String(value ?? '').trim();
+  return String(value ?? '').trim().replace(/\s+/g, ' ');
+}
+
+function listFromCsv(value) {
+  return String(value ?? '')
+    .split(',')
+    .map((item) => cleanText(item))
+    .filter(Boolean);
+}
+
+function parseTitle(value) {
+  const title = cleanText(value);
+  const seriesMatch = title.match(/^(.*) \((.+), #(\d+(?:\.\d+)?)\)$/);
+  if (!seriesMatch) return { title };
+  return {
+    title: cleanText(seriesMatch[1]),
+    series: cleanText(seriesMatch[2]),
+    seriesPosition: Number(seriesMatch[3]),
+  };
 }
 
 function cleanIsbn(value) {
@@ -49,13 +68,24 @@ function normalizeDate(value) {
 
 function normalizeStatus(row) {
   const shelf = cleanText(row['Exclusive Shelf']).toLowerCase();
+  const shelves = listFromCsv(row.Bookshelves).map((item) => item.toLowerCase());
+  if (shelves.includes('abandoned')) return 'dnf';
+  if (shelves.includes('paused')) return 'paused';
   if (shelf === 'read') return 'read';
   if (shelf === 'currently-reading') return 'currently-reading';
   return 'want-to-read';
 }
 
+function mediaType(row) {
+  const shelves = listFromCsv(row.Bookshelves).map((item) => item.toLowerCase());
+  return shelves.includes('manga-read') || cleanText(row.Binding).toLowerCase() === 'webtoon'
+    ? 'manga'
+    : 'book';
+}
+
 function reviewToPlainText(value) {
-  return cleanText(value)
+  return String(value ?? '')
+    .trim()
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<[^>]+>/g, '')
     .replace(/&amp;/g, '&')
@@ -91,7 +121,7 @@ const rows = parse(csv, {
 const existingBooks = await readExistingBooks();
 const existingByKey = new Map();
 for (const book of existingBooks) {
-  for (const key of [book.isbn13, book.isbn10, book.id]) {
+  for (const key of [book.goodreadsId, book.isbn13, book.isbn10, book.id]) {
     if (key) existingByKey.set(key, book);
   }
 }
@@ -99,14 +129,16 @@ for (const book of existingBooks) {
 const imported = [];
 const seenIds = new Set();
 for (const row of rows) {
-  const title = cleanText(row.Title);
+  const parsedTitle = parseTitle(row.Title);
+  const { title, series, seriesPosition } = parsedTitle;
   const author = cleanText(row.Author);
   if (!title || !author) continue;
 
   const isbn13 = cleanIsbn(row.ISBN13);
   const isbn10 = cleanIsbn(row.ISBN);
-  const baseId = slugify(`${title}-${author}`) || `goodreads-${cleanText(row['Book Id'])}`;
-  const existing = existingByKey.get(isbn13) ?? existingByKey.get(isbn10) ?? existingByKey.get(baseId);
+  const goodreadsId = cleanText(row['Book Id']);
+  const baseId = slugify(`${title}-${author}`) || `goodreads-${goodreadsId}`;
+  const existing = existingByKey.get(goodreadsId) ?? existingByKey.get(isbn13) ?? existingByKey.get(isbn10) ?? existingByKey.get(baseId);
   const preferredId = existing?.id ?? baseId;
   let id = preferredId;
   let suffix = 2;
@@ -119,8 +151,16 @@ for (const row of rows) {
     slug: existing?.slug ?? id,
     title,
     author,
+    additionalAuthors: listFromCsv(row['Additional Authors']),
+    series: series ?? existing?.series,
+    seriesPosition: seriesPosition ?? existing?.seriesPosition,
+    goodreadsId,
     isbn10,
     isbn13,
+    publisher: cleanText(row.Publisher),
+    format: cleanText(row.Binding),
+    shelves: listFromCsv(row.Bookshelves),
+    mediaType: mediaType(row),
     status: normalizeStatus(row),
     rating: toNumber(row['My Rating'], { zeroIsMissing: true }),
     averageRating: toNumber(row['Average Rating'], { zeroIsMissing: true }),
@@ -137,14 +177,16 @@ for (const row of rows) {
   imported.push(book);
 }
 
-const importedKeys = new Set(imported.flatMap((book) => [book.isbn13, book.isbn10, book.id].filter(Boolean)));
-const manualBooks = existingBooks.filter((book) => ![book.isbn13, book.isbn10, book.id].some((key) => key && importedKeys.has(key)));
+const importedKeys = new Set(imported.flatMap((book) => [book.goodreadsId, book.isbn13, book.isbn10, book.id].filter(Boolean)));
+const manualBooks = replaceCatalog
+  ? []
+  : existingBooks.filter((book) => ![book.goodreadsId, book.isbn13, book.isbn10, book.id].some((key) => key && importedKeys.has(key)));
 const books = [...imported, ...manualBooks].sort((a, b) =>
   (b.dateAdded ?? '').localeCompare(a.dateAdded ?? '') || a.title.localeCompare(b.title),
 );
 
 if (dryRun) {
-  console.log(`Would import ${imported.length} Goodreads books and preserve ${manualBooks.length} existing books.`);
+  console.log(`Would import ${imported.length} Goodreads books and ${replaceCatalog ? 'replace the catalog' : `preserve ${manualBooks.length} existing books`}.`);
   console.log(`Output: ${outputPath}`);
   process.exit(0);
 }
@@ -153,6 +195,6 @@ const temporaryPath = `${outputPath}.tmp`;
 await writeFile(temporaryPath, `${JSON.stringify(books, null, 2)}\n`);
 await rename(temporaryPath, outputPath);
 console.log(`Imported ${imported.length} Goodreads books.`);
-console.log(`Preserved ${manualBooks.length} existing books.`);
+console.log(replaceCatalog ? 'Replaced the previous catalog.' : `Preserved ${manualBooks.length} existing books.`);
 console.log(`Wrote ${books.length} books to ${outputPath}.`);
 console.log('Goodreads Private Notes were intentionally not imported.');
