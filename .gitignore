@@ -1,0 +1,29 @@
+# build output
+dist/
+# generated types
+.astro/
+
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+
+# environment variables
+.env
+.env.production
+
+# private source exports (normalize into src/data/books.json)
+data/private/
+goodreads_library_export.csv
+goodreads-export.csv
+
+# macOS-specific files
+.DS_Store
+
+# jetbrains setting folder
+.idea/

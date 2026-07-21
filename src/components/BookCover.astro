@@ -1,0 +1,31 @@
+---
+interface Props {
+  title: string;
+  author: string;
+  coverUrl?: string;
+  eager?: boolean;
+}
+
+const { title, author, coverUrl, eager = false } = Astro.props;
+const initials = title
+  .split(/\s+/)
+  .filter((word) => !['the', 'a', 'an', 'of'].includes(word.toLowerCase()))
+  .slice(0, 2)
+  .map((word) => word[0])
+  .join('');
+---
+
+<div class="book-cover" data-cover>
+  <span class="book-cover-fallback" aria-hidden="true">{initials}</span>
+  {coverUrl ? (
+    <img
+      src={coverUrl}
+      alt={`Cover of ${title} by ${author}`}
+      width="360"
+      height="540"
+      loading={eager ? 'eager' : 'lazy'}
+      decoding="async"
+      onerror="this.remove()"
+    />
+  ) : null}
+</div>

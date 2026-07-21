@@ -1,0 +1,112 @@
+---
+import { getCollection } from 'astro:content';
+import BookCard from '../components/BookCard.astro';
+import Layout from '../layouts/Layout.astro';
+
+const books = (await getCollection('books', ({ data }) => data.visibility))
+  .sort((a, b) => Number(b.data.featured) - Number(a.data.featured) || a.data.title.localeCompare(b.data.title));
+
+const readingCount = books.filter((book) => book.data.status === 'currently-reading').length;
+const readCount = books.filter((book) => book.data.status === 'read').length;
+const wantCount = books.filter((book) => book.data.status === 'want-to-read').length;
+---
+
+<Layout>
+  <div class="page-shell">
+    <section class="hero" aria-labelledby="library-title">
+      <div>
+        <p class="eyebrow">Personal reading library</p>
+        <h1 id="library-title">Books worth keeping close.</h1>
+        <p class="hero-copy">What I have read, what I am reading, and what is waiting patiently on the shelf.</p>
+      </div>
+      <p class="library-count"><strong>{books.length}</strong> books catalogued</p>
+    </section>
+
+    <section aria-label="Browse the library">
+      <div class="library-tools">
+        <label class="search-wrap">
+          <span class="visually-hidden">Search books</span>
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="m20 20-3.5-3.5"></path>
+          </svg>
+          <input class="search-input" type="search" placeholder="Search title, author, series..." data-search-input autocomplete="off" />
+        </label>
+        <div class="filter-list" aria-label="Filter by reading status">
+          <button class="filter-button" type="button" data-filter="all" aria-pressed="true">All {books.length}</button>
+          <button class="filter-button" type="button" data-filter="currently-reading" aria-pressed="false">Reading {readingCount}</button>
+          <button class="filter-button" type="button" data-filter="want-to-read" aria-pressed="false">Want to read {wantCount}</button>
+          <button class="filter-button" type="button" data-filter="read" aria-pressed="false">Read {readCount}</button>
+        </div>
+      </div>
+
+      <p class="results-line" aria-live="polite" data-results-line>Showing all {books.length} books</p>
+
+      <div class="book-grid" data-book-grid>
+        {books.map((book, index) => <BookCard book={book} eager={index < 4} />)}
+        <p class="empty-state" data-empty-state>No books match this search yet.</p>
+      </div>
+    </section>
+  </div>
+</Layout>
+
+<script>
+  const searchInput = document.querySelector<HTMLInputElement>('[data-search-input]');
+  const filterButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-filter]')];
+  const cards = [...document.querySelectorAll<HTMLElement>('[data-book-card]')];
+  const resultsLine = document.querySelector<HTMLElement>('[data-results-line]');
+  const emptyState = document.querySelector<HTMLElement>('[data-empty-state]');
+  let activeFilter = 'all';
+
+  function updateLibrary() {
+    const query = searchInput?.value.trim().toLowerCase() ?? '';
+    let visible = 0;
+
+    for (const card of cards) {
+      const matchesFilter = activeFilter === 'all' || card.dataset.status === activeFilter;
+      const matchesSearch = !query || card.dataset.search?.includes(query);
+      card.hidden = !(matchesFilter && matchesSearch);
+      if (!card.hidden) visible += 1;
+    }
+
+    if (resultsLine) {
+      resultsLine.textContent = query || activeFilter !== 'all'
+        ? `${visible} ${visible === 1 ? 'book' : 'books'} found`
+        : `Showing all ${visible} books`;
+    }
+    emptyState?.setAttribute('data-visible', String(visible === 0));
+  }
+
+  searchInput?.addEventListener('input', updateLibrary);
+
+  for (const button of filterButtons) {
+    button.addEventListener('click', () => {
+      activeFilter = button.dataset.filter ?? 'all';
+      for (const candidate of filterButtons) {
+        candidate.setAttribute('aria-pressed', String(candidate === button));
+      }
+      updateLibrary();
+    });
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === '/' && document.activeElement !== searchInput) {
+      event.preventDefault();
+      searchInput?.focus();
+    }
+  });
+</script>
+
+<style>
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>

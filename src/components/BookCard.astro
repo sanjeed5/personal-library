@@ -1,0 +1,35 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import BookCover from './BookCover.astro';
+
+interface Props {
+  book: CollectionEntry<'books'>;
+  eager?: boolean;
+}
+
+const { book, eager = false } = Astro.props;
+const data = book.data;
+const statusLabels = {
+  'want-to-read': 'Want to read',
+  'currently-reading': 'Reading',
+  read: 'Read',
+  paused: 'Paused',
+  dnf: 'Did not finish',
+};
+const searchable = [data.title, data.author, data.series, ...data.subjects].filter(Boolean).join(' ').toLowerCase();
+---
+
+<article class="book-card" data-book-card data-status={data.status} data-search={searchable}>
+  <a class="book-card-cover" href={`/books/${data.slug}/`} aria-label={`View ${data.title}`}>
+    <BookCover title={data.title} author={data.author} coverUrl={data.coverUrl} eager={eager} />
+  </a>
+  <div class="book-card-body">
+    <div class="book-card-kicker">
+      <span class:list={['status-pill', `status-${data.status}`]}>{statusLabels[data.status]}</span>
+      {data.rating ? <span aria-label={`${data.rating} out of 5 stars`}>★ {data.rating}</span> : null}
+    </div>
+    <h2><a href={`/books/${data.slug}/`}>{data.title}</a></h2>
+    <p class="book-author">{data.author}</p>
+    {data.series ? <p class="book-series">{data.series}{data.seriesPosition ? ` #${data.seriesPosition}` : ''}</p> : null}
+  </div>
+</article>

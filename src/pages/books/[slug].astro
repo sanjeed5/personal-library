@@ -1,0 +1,70 @@
+---
+import { getCollection, type CollectionEntry } from 'astro:content';
+import BookCover from '../../components/BookCover.astro';
+import Layout from '../../layouts/Layout.astro';
+
+export async function getStaticPaths() {
+  const books = await getCollection('books', ({ data }) => data.visibility);
+  return books.map((book) => ({ params: { slug: book.data.slug }, props: { book } }));
+}
+
+interface Props {
+  book: CollectionEntry<'books'>;
+}
+
+const { book } = Astro.props;
+const data = book.data;
+const statusLabels = {
+  'want-to-read': 'Want to read',
+  'currently-reading': 'Currently reading',
+  read: 'Read',
+  paused: 'Paused',
+  dnf: 'Did not finish',
+};
+const description = data.description ?? `${data.title} by ${data.author} in Sanjeed's personal library.`;
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Book',
+  name: data.title,
+  author: { '@type': 'Person', name: data.author },
+  isbn: data.isbn13 ?? data.isbn10,
+  numberOfPages: data.pages,
+  datePublished: data.publishedYear?.toString(),
+  image: data.coverUrl,
+  genre: data.subjects,
+};
+---
+
+<Layout title={`${data.title} by ${data.author} | Sanjeed's Library`} description={description} image={data.coverUrl}>
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} is:inline />
+  <div class="page-shell">
+    <article class="book-detail">
+      <div class="book-detail-cover">
+        <BookCover title={data.title} author={data.author} coverUrl={data.coverUrl} eager />
+      </div>
+      <div>
+        <p class="eyebrow">{statusLabels[data.status]}</p>
+        <h1>{data.title}</h1>
+        <p class="book-detail-author">by {data.author}</p>
+        {data.series ? <p class="book-detail-series">{data.series}{data.seriesPosition ? `, book ${data.seriesPosition}` : ''}</p> : null}
+
+        {data.description ? <p class="book-description">{data.description}</p> : null}
+
+        <dl class="detail-meta">
+          {data.publishedYear ? <div><dt>Published</dt><dd>{data.publishedYear}</dd></div> : null}
+          {data.pages ? <div><dt>Length</dt><dd>{data.pages.toLocaleString()} pages</dd></div> : null}
+          {data.rating ? <div><dt>My rating</dt><dd>{data.rating} / 5</dd></div> : null}
+          {data.dateRead ? <div><dt>Finished</dt><dd>{data.dateRead}</dd></div> : null}
+          {data.isbn13 ? <div><dt>ISBN</dt><dd>{data.isbn13}</dd></div> : null}
+        </dl>
+
+        {data.subjects.length ? <ul class="subject-list" aria-label="Genres">{data.subjects.map((subject) => <li>{subject}</li>)}</ul> : null}
+
+        {data.review ? <section class="book-review"><h2>Notes</h2><p>{data.review}</p></section> : null}
+
+        {data.openLibraryUrl ? <p class="back-link"><a href={data.openLibraryUrl}>View metadata on Open Library</a></p> : null}
+        <p><a class="back-link" href="/">← Back to the library</a></p>
+      </div>
+    </article>
+  </div>
+</Layout>
