@@ -39,7 +39,7 @@ npm run check
 npm run build
 ```
 
-Use `--replace` for a fresh Goodreads export so books removed from Goodreads do not remain as stale manual entries. Omit it when you intentionally keep books added directly to `books.json`.
+Use `--replace` for a fresh Goodreads export so books removed from Goodreads do not remain as stale manual entries. Manga and comics are excluded by default because this catalog tracks books; pass `--include-manga` only when intentionally publishing them. Omit `--replace` when you intentionally keep books added directly to `books.json`.
 
 Preview an import without writing data:
 

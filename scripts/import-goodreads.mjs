@@ -11,9 +11,10 @@ const outputPath = process.env.BOOKS_FILE
   : resolve(projectRoot, 'src/data/books.json');
 const dryRun = process.argv.includes('--dry-run');
 const replaceCatalog = process.argv.includes('--replace');
+const includeManga = process.argv.includes('--include-manga');
 
 if (!sourcePath) {
-  console.error('Usage: npm run import:goodreads -- /path/to/goodreads_library_export.csv [--dry-run] [--replace]');
+  console.error('Usage: npm run import:goodreads -- /path/to/goodreads_library_export.csv [--dry-run] [--replace] [--include-manga]');
   process.exit(1);
 }
 
@@ -76,9 +77,18 @@ function normalizeStatus(row) {
   return 'want-to-read';
 }
 
-function mediaType(row) {
+function mediaType(row, existing) {
   const shelves = listFromCsv(row.Bookshelves).map((item) => item.toLowerCase());
-  return shelves.includes('manga-read') || cleanText(row.Binding).toLowerCase() === 'webtoon'
+  const binding = cleanText(row.Binding).toLowerCase();
+  const title = cleanText(row.Title);
+  const subjects = (existing?.subjects ?? []).join(' ');
+  const sequentialArtTitle = /(vol\.?\s*\d|volume\s*\d|attack on titan|avatar: the last airbender|avatar volume|black clover|boruto|death note notebook|dr\.stone|food wars|fullmetal alchemist|hunter x hunter|naruto|one piece|psycho-pass|spy.?family|tokyo revengers|vigilante|vinland saga|assassination classroom)/i;
+  const sequentialArtSubjects = /(manga|comic books|comics & graphic novels|graphic novel)/i;
+
+  return shelves.includes('manga-read')
+    || binding === 'webtoon'
+    || sequentialArtTitle.test(title)
+    || sequentialArtSubjects.test(subjects)
     ? 'manga'
     : 'book';
 }
@@ -128,6 +138,7 @@ for (const book of existingBooks) {
 
 const imported = [];
 const seenIds = new Set();
+let skippedManga = 0;
 for (const row of rows) {
   const parsedTitle = parseTitle(row.Title);
   const { title, series, seriesPosition } = parsedTitle;
@@ -139,6 +150,12 @@ for (const row of rows) {
   const goodreadsId = cleanText(row['Book Id']);
   const baseId = slugify(`${title}-${author}`) || `goodreads-${goodreadsId}`;
   const existing = existingByKey.get(goodreadsId) ?? existingByKey.get(isbn13) ?? existingByKey.get(isbn10) ?? existingByKey.get(baseId);
+  const type = mediaType(row, existing);
+  if (!includeManga && type === 'manga') {
+    skippedManga += 1;
+    continue;
+  }
+
   const preferredId = existing?.id ?? baseId;
   let id = preferredId;
   let suffix = 2;
@@ -160,7 +177,7 @@ for (const row of rows) {
     publisher: cleanText(row.Publisher),
     format: cleanText(row.Binding),
     shelves: listFromCsv(row.Bookshelves),
-    mediaType: mediaType(row),
+    mediaType: type,
     status: normalizeStatus(row),
     rating: toNumber(row['My Rating'], { zeroIsMissing: true }),
     averageRating: toNumber(row['Average Rating'], { zeroIsMissing: true }),
@@ -186,7 +203,7 @@ const books = [...imported, ...manualBooks].sort((a, b) =>
 );
 
 if (dryRun) {
-  console.log(`Would import ${imported.length} Goodreads books and ${replaceCatalog ? 'replace the catalog' : `preserve ${manualBooks.length} existing books`}.`);
+  console.log(`Would import ${imported.length} Goodreads books, skip ${skippedManga} manga entries, and ${replaceCatalog ? 'replace the catalog' : `preserve ${manualBooks.length} existing books`}.`);
   console.log(`Output: ${outputPath}`);
   process.exit(0);
 }
@@ -195,6 +212,7 @@ const temporaryPath = `${outputPath}.tmp`;
 await writeFile(temporaryPath, `${JSON.stringify(books, null, 2)}\n`);
 await rename(temporaryPath, outputPath);
 console.log(`Imported ${imported.length} Goodreads books.`);
+console.log(`Skipped ${skippedManga} manga entries${includeManga ? ' (none excluded)' : ''}.`);
 console.log(replaceCatalog ? 'Replaced the previous catalog.' : `Preserved ${manualBooks.length} existing books.`);
 console.log(`Wrote ${books.length} books to ${outputPath}.`);
 console.log('Goodreads Private Notes were intentionally not imported.');

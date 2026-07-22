@@ -40,7 +40,7 @@ const mangaCount = books.filter((book) => book.data.mediaType === 'manga').lengt
           <button class="filter-button" type="button" data-filter="currently-reading" aria-pressed="false">Reading {readingCount}</button>
           <button class="filter-button" type="button" data-filter="want-to-read" aria-pressed="false">Want to read {wantCount}</button>
           <button class="filter-button" type="button" data-filter="read" aria-pressed="false">Read {readCount}</button>
-          <button class="filter-button" type="button" data-filter="manga" aria-pressed="false">Manga {mangaCount}</button>
+          {mangaCount ? <button class="filter-button" type="button" data-filter="manga" aria-pressed="false">Manga {mangaCount}</button> : null}
         </div>
       </div>
 
