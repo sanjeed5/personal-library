@@ -35,6 +35,7 @@ Export your library from Goodreads, then run:
 ```bash
 npm run import:goodreads -- ~/Downloads/goodreads_library_export.csv --replace
 npm run enrich
+npm run enrich:covers
 npm run check
 npm run build
 ```
@@ -49,7 +50,7 @@ npm run import:goodreads -- ~/Downloads/goodreads_library_export.csv --dry-run
 
 The importer normalizes Goodreads ISBN formatting, shelves, ratings, dates, reviews, and page counts. Existing enrichment and visibility choices are preserved.
 
-The enrichment command queries Open Library politely, caches results in `src/data/books.json`, and skips complete entries. Options:
+The metadata enrichment command queries Open Library politely, caches results in `src/data/books.json`, and skips complete entries. The cover enrichment command then fills remaining gaps from exact Goodreads IDs and validates each image before caching it. Visitors never call either service. Options:
 
 ```bash
 npm run enrich -- --limit 10

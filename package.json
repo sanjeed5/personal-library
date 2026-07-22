@@ -12,6 +12,7 @@
     "check": "astro check",
     "import:goodreads": "node scripts/import-goodreads.mjs",
     "enrich": "node scripts/enrich-open-library.mjs",
+    "enrich:covers": "node scripts/enrich-goodreads-covers.mjs",
     "cf:preview": "npm run build && wrangler dev",
     "cf:deploy": "npm run build && wrangler deploy",
     "astro": "astro"
