@@ -85,7 +85,7 @@ async function enrich(book) {
     matched: true,
     book: {
       ...book,
-      coverUrl: refresh || !book.coverUrl
+      coverUrl: !book.coverUrl?.includes('compressed.photo.goodreads.com') && (refresh || !book.coverUrl)
         ? (match.cover_i ? `https://covers.openlibrary.org/b/id/${match.cover_i}-L.jpg` : book.coverUrl)
         : book.coverUrl,
       openLibraryUrl: refresh || !book.openLibraryUrl
