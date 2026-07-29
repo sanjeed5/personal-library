@@ -6,6 +6,8 @@ import { ShelfEngine, type ShelfMode } from './ShelfEngine';
 import { siteConfig } from './site-config';
 import './shelf.css';
 
+const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, '');
+
 const statusLabels: Record<ReadingStatus, string> = {
   'want-to-read': 'Want to read',
   'currently-reading': 'Currently reading',
@@ -140,7 +142,7 @@ export default function InteractiveLibrary() {
       />
 
       <header className="shelf-header">
-        <a className="shelf-wordmark" href="/" aria-label="Sanjeed's Library home">
+        <a className="shelf-wordmark" href={`${baseUrl}/`} aria-label="Sanjeed's Library home">
           <span>{siteConfig.wordmark}</span>
           <span className="wordmark__divider" />
           <span>{siteConfig.collectionName}</span>
@@ -215,7 +217,7 @@ export default function InteractiveLibrary() {
               {selectedBook.pages ? <div><dt>Length</dt><dd>{selectedBook.pages} pages</dd></div> : null}
               {selectedBook.publishedYear ? <div><dt>Published</dt><dd>{selectedBook.publishedYear}</dd></div> : null}
             </dl>
-            <a className="official-link" data-testid="official-link" href={`/books/${selectedBook.slug}/`}><span>Open full details</span><span aria-hidden="true">↗</span></a>
+            <a className="official-link" data-testid="official-link" href={`${baseUrl}/books/${selectedBook.slug}/`}><span>Open full details</span><span aria-hidden="true">↗</span></a>
           </div>
           <div className="focus-controls" aria-label="Inspection controls"><span>Drag to orbit</span><span>Pinch or scroll to zoom</span><button type="button" data-testid="reset-view" onClick={() => engineRef.current?.resetFocusView()}>Reset view</button></div>
         </div> : null}

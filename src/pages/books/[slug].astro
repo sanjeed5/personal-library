@@ -67,7 +67,7 @@ const jsonLd = {
 
         {data.openLibraryUrl ? <p class="back-link"><a href={data.openLibraryUrl}>View metadata on Open Library</a></p> : null}
         {data.goodreadsId ? <p><a class="back-link" href={`https://www.goodreads.com/book/show/${data.goodreadsId}`}>View on Goodreads</a></p> : null}
-        <p><a class="back-link" href="/">← Back to the library</a></p>
+        <p><a class="back-link" href={import.meta.env.BASE_URL}>← Back to the library</a></p>
       </div>
     </article>
   </div>
