@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://library.sanjeed.in/sitemap-index.xml
