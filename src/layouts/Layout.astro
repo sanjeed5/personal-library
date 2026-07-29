@@ -5,12 +5,14 @@ interface Props {
   title?: string;
   description?: string;
   image?: string;
+  immersive?: boolean;
 }
 
 const {
   title = "Sanjeed's Library",
   description = 'A personal shelf of books read, in progress, and waiting their turn.',
   image,
+  immersive = false,
 } = Astro.props;
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
@@ -33,21 +35,21 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     <meta name="twitter:card" content={image ? 'summary_large_image' : 'summary'} />
     <title>{title}</title>
   </head>
-  <body>
+  <body class:list={{ immersive }}>
     <a class="skip-link" href="#main-content">Skip to content</a>
-    <header class="site-header">
+    {!immersive && <header class="site-header">
       <a class="wordmark" href="/" aria-label="Sanjeed's Library home">
         <span class="wordmark-mark" aria-hidden="true">S</span>
         <span>Sanjeed's Library</span>
       </a>
       <a class="site-link" href="https://sanjeed.in">sanjeed.in</a>
-    </header>
+    </header>}
     <main id="main-content">
       <slot />
     </main>
-    <footer class="site-footer">
+    {!immersive && <footer class="site-footer">
       <p>Built as a quiet record of a reading life.</p>
       <p>Book metadata and covers may be sourced from <a href="https://openlibrary.org/">Open Library</a>.</p>
-    </footer>
+    </footer>}
   </body>
 </html>

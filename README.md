@@ -8,7 +8,7 @@ A small personal-library website built with Astro's official `minimal` starter a
 - Astro validates every book against `src/content.config.ts`.
 - Goodreads CSV is an import source, not a runtime dependency.
 - Open Library enrichment happens offline and is cached in Git.
-- Visitors receive static HTML, CSS, and a tiny search/filter script.
+- Visitors receive a static Astro site with an interactive Three.js shelf, search, filters, and an accessible catalog view.
 - Goodreads `Private Notes` are never imported.
 
 ## Local development
@@ -99,3 +99,5 @@ The checked-in `wrangler.jsonc` publishes `dist/` and serves the generated `404.
 ## Sources and attribution
 
 Book metadata and covers may come from [Open Library](https://openlibrary.org/). Open Library asks public sites using its covers to link back, which each enriched book page does.
+
+The 3D shelf experience is adapted from Mint's open-source [Complete Shelf](https://github.com/mintdotgg/mint-playground/tree/main/experiences/complete-shelf). Its license is preserved in `THIRD_PARTY_COMPLETE_SHELF_LICENSE`.
