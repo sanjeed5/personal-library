@@ -64,6 +64,7 @@ type RuntimeBook = {
   idleAmount: number;
   textures: THREE.Texture[];
   coverRequested: boolean;
+  detailed: boolean;
 };
 
 const shelfTop = 0.34;
@@ -74,6 +75,7 @@ const shelfColor = new THREE.Color("#5a4132");
 const clamp = THREE.MathUtils.clamp;
 const focusInDuration = 0.46;
 const focusOutDuration = 0.34;
+const initialDetailedBooks = 6;
 const desktopDetailWidthRatio = 0.41;
 const compactDetailWidthRatio = 0.48;
 const desktopDetailMaxWidth = 620;
@@ -116,6 +118,10 @@ function toTexture(
   texture.generateMipmaps = true;
   texture.minFilter = THREE.LinearMipmapLinearFilter;
   return texture;
+}
+
+function widthForIndex(index: number) {
+  return 1.31 + ((index % 5) - 2) * 0.018;
 }
 
 function createLivingMaterial(color: string) {
@@ -204,6 +210,7 @@ export class ShelfEngine {
   private lastTimestamp = 0;
   private lastDiagnosticsAt = 0;
   private isDisposed = false;
+  private hasSignaledReady = false;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -251,9 +258,7 @@ export class ShelfEngine {
     this.bindEvents();
     this.resizeObserver.observe(canvas);
     this.handleResize();
-    this.callbacks.onReady();
-    this.callbacks.onStatus(`${this.booksData.length} volumes ready`);
-    this.animate();
+    this.animationFrame = requestAnimationFrame(this.animate);
     if (siteConfig.enableOptionalStripeArchive) {
       void this.loadStripeAssets();
     }
@@ -339,20 +344,23 @@ export class ShelfEngine {
     let cursor = 0;
     const gap = 0.045;
 
+    this.motionLayout = createMotionLayout(
+      this.booksData.map((book, index) => ({
+        width: widthForIndex(index),
+        thickness: book.thickness,
+      })),
+    );
+
     this.booksData.forEach((book, index) => {
       cursor += book.thickness * 0.5;
-      const runtime = this.createBook(book, index, cursor);
+      const runtime = index < initialDetailedBooks
+        ? this.createBook(book, index, cursor)
+        : this.createPlaceholderBook(book, index, cursor);
       this.runtimeBooks.push(runtime);
       this.shelfGroup.add(runtime.slot);
       cursor += book.thickness * 0.5 + gap;
     });
 
-    this.motionLayout = createMotionLayout(
-      this.runtimeBooks.map((book) => ({
-        width: book.width,
-        thickness: book.data.thickness,
-      })),
-    );
     this.runtimeBooks.forEach((book, index) => {
       this.commitBookPose(
         book,
@@ -391,8 +399,103 @@ export class ShelfEngine {
     this.shelfFurniture.add(shelfEdge);
   }
 
+  private createPlaceholderBook(
+    book: CatalogBook,
+    index: number,
+    x: number,
+  ): RuntimeBook {
+    const width = widthForIndex(index);
+    const depth = book.thickness;
+    const slot = new THREE.Group();
+    slot.name = `bookSlot:${book.id}`;
+    slot.position.set(x, shelfTop + book.height * 0.5, 0.04);
+
+    const content = new THREE.Group();
+    content.name = `bookPresentation:${book.id}`;
+    const inspectionIdle = new THREE.Group();
+    const physical = new THREE.Group();
+    const assetHolder = new THREE.Group();
+    slot.add(content);
+    content.add(inspectionIdle);
+    inspectionIdle.add(physical, assetHolder);
+
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(width, book.height, depth),
+      new THREE.MeshStandardMaterial({
+        color: book.cover,
+        roughness: 0.8,
+      }),
+    );
+    body.castShadow = true;
+    physical.add(body);
+
+    const accent = new THREE.Mesh(
+      new THREE.BoxGeometry(0.035, book.height * 0.88, depth + 0.006),
+      new THREE.MeshStandardMaterial({ color: book.accent, roughness: 0.72 }),
+    );
+    accent.position.x = -width * 0.5 + 0.045;
+    physical.add(accent);
+
+    const frontSurface = new THREE.Mesh<
+      THREE.PlaneGeometry,
+      THREE.MeshPhysicalMaterial
+    >(
+      new THREE.PlaneGeometry(width - 0.065, book.height - 0.065),
+      new THREE.MeshPhysicalMaterial({ color: book.cover, roughness: 0.78 }),
+    );
+    frontSurface.position.z = depth * 0.5 + 0.004;
+    physical.add(frontSurface);
+
+    const titleDecal = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.01, 0.01),
+      new THREE.MeshBasicMaterial({ visible: false }),
+    );
+    titleDecal.visible = false;
+    inspectionIdle.add(titleDecal);
+
+    const pickProxy = new THREE.Mesh(
+      new THREE.BoxGeometry(width, book.height, depth + 0.07),
+      new THREE.MeshBasicMaterial({
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+      }),
+    );
+    pickProxy.name = `pick:${book.id}`;
+    pickProxy.userData.bookIndex = index;
+    inspectionIdle.add(pickProxy);
+    this.pickTargets.push(pickProxy);
+
+    const pose = shelvedBookPose(this.motionLayout);
+    content.position.set(pose.x, 0, pose.z);
+    content.rotation.y = pose.yaw;
+    content.scale.setScalar(pose.scale);
+
+    return {
+      data: book,
+      index,
+      slot,
+      content,
+      inspectionIdle,
+      physical,
+      assetHolder,
+      frontSurface,
+      titleDecal,
+      pickProxy,
+      x,
+      width,
+      pose,
+      hover: 0,
+      targetHover: 0,
+      idleAmount: 0,
+      textures: [],
+      coverRequested: false,
+      detailed: false,
+    };
+  }
+
   private createBook(book: CatalogBook, index: number, x: number): RuntimeBook {
-    const width = 1.31 + ((index % 5) - 2) * 0.018;
+    const width = widthForIndex(index);
     const depth = book.thickness;
     const slot = new THREE.Group();
     slot.name = `bookSlot:${book.id}`;
@@ -601,6 +704,7 @@ export class ShelfEngine {
       idleAmount: 0,
       textures,
       coverRequested: false,
+      detailed: true,
     };
   }
 
@@ -845,6 +949,7 @@ export class ShelfEngine {
         return;
       }
 
+      this.ensureDetailedBook(this.activeIndex);
       this.motionBookIndex = this.presentedIndex;
       this.browseMotionPhase =
         this.motionBookIndex === null ? "extract-next" : "retreat-current";
@@ -909,7 +1014,7 @@ export class ShelfEngine {
 
   private animate = () => {
     if (this.isDisposed) return;
-    this.animationFrame = requestAnimationFrame(this.animate);
+    const firstFrame = !this.hasSignaledReady;
     const timestamp = performance.now();
     const elapsed = timestamp / 1000;
     const delta = clamp((timestamp - this.lastTimestamp) / 1000 || 1 / 60, 0, 0.05);
@@ -920,24 +1025,31 @@ export class ShelfEngine {
 
     if (this.controls.enabled) this.controls.update();
     this.renderer.render(this.scene, this.camera);
+    if (firstFrame) {
+      this.hasSignaledReady = true;
+      this.callbacks.onReady();
+      this.callbacks.onStatus(`${this.booksData.length} volumes ready`);
+    }
     if (timestamp - this.lastDiagnosticsAt > 500) {
-      const diagnostics = this.getDiagnostics();
-      this.canvas.dataset.drawCalls = String(diagnostics.drawCalls);
-      this.canvas.dataset.triangles = String(diagnostics.triangles);
-      this.canvas.dataset.geometries = String(diagnostics.geometries);
-      this.canvas.dataset.textures = String(diagnostics.textures);
-      this.canvas.dataset.stripeAssets = String(
-        diagnostics.stripeAssetsLoaded,
-      );
-      this.canvas.dataset.pixelRatio = String(diagnostics.pixelRatio);
-      this.canvas.dataset.motionPhase = diagnostics.motionPhase;
-      this.canvas.dataset.collisionFree = String(
-        diagnostics.currentCollision === null,
-      );
-      this.canvas.dataset.collisionRejects = String(
-        diagnostics.collisionRejects,
-      );
+      const info = this.renderer.info;
+      this.canvas.dataset.drawCalls = String(info.render.calls);
+      this.canvas.dataset.triangles = String(info.render.triangles);
+      this.canvas.dataset.geometries = String(info.memory.geometries);
+      this.canvas.dataset.textures = String(info.memory.textures);
+      this.canvas.dataset.stripeAssets = String(this.assetCount);
+      this.canvas.dataset.pixelRatio = String(this.renderer.getPixelRatio());
+      this.canvas.dataset.motionPhase = this.browseMotionPhase;
+      this.canvas.dataset.collisionRejects = String(this.collisionRejects);
       this.lastDiagnosticsAt = timestamp;
+    }
+    if (firstFrame) {
+      window.setTimeout(() => {
+        if (!this.isDisposed) {
+          this.animationFrame = requestAnimationFrame(this.animate);
+        }
+      }, 100);
+    } else {
+      this.animationFrame = requestAnimationFrame(this.animate);
     }
   };
 
@@ -1297,8 +1409,34 @@ export class ShelfEngine {
     }
   }
 
+  private ensureDetailedBook(index: number) {
+    const current = this.runtimeBooks[index];
+    if (!current || current.detailed) return current;
+
+    const pickIndex = this.pickTargets.indexOf(current.pickProxy);
+    if (pickIndex >= 0) this.pickTargets.splice(pickIndex, 1);
+    this.shelfGroup.remove(current.slot);
+    current.slot.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      object.geometry?.dispose();
+      const materials = Array.isArray(object.material)
+        ? object.material
+        : [object.material];
+      materials.forEach((material) => material?.dispose());
+    });
+
+    const detailed = this.createBook(current.data, index, current.x);
+    detailed.hover = current.hover;
+    detailed.targetHover = current.targetHover;
+    detailed.idleAmount = current.idleAmount;
+    this.commitBookPose(detailed, current.pose, false);
+    this.runtimeBooks[index] = detailed;
+    this.shelfGroup.add(detailed.slot);
+    return detailed;
+  }
+
   private ensureCustomCover(index: number) {
-    const runtime = this.runtimeBooks[index];
+    const runtime = this.ensureDetailedBook(index);
     if (!runtime || runtime.coverRequested || !runtime.data.coverImage) return;
     runtime.coverRequested = true;
     void this.loadCustomCover(runtime, runtime.data.coverImage);
@@ -1407,6 +1545,7 @@ export class ShelfEngine {
     this.targetScrollIndex = next;
     this.scrollIndex = next;
     this.activeIndex = next;
+    this.shelfGroup.position.x = -this.xAtIndex(next);
     this.callbacks.onActiveIndex(next);
     this.callbacks.onStatus(
       `Preparing ${this.runtimeBooks[next].data.shortTitle}`,
@@ -1490,6 +1629,15 @@ export class ShelfEngine {
 
   getDiagnostics() {
     const info = this.renderer.info;
+    const selectedWorld = new THREE.Vector3();
+    const selectedScale = new THREE.Vector3();
+    const selectedBounds = new THREE.Box3();
+    if (this.selectedIndex !== null) {
+      const selected = this.runtimeBooks[this.selectedIndex];
+      selected.content.getWorldPosition(selectedWorld);
+      selected.content.getWorldScale(selectedScale);
+      selectedBounds.setFromObject(selected.content);
+    }
     return {
       mode: this.mode,
       activeIndex: this.activeIndex,
@@ -1506,6 +1654,15 @@ export class ShelfEngine {
       collisionRejects: this.collisionRejects,
       lastCollisionPair: this.lastCollisionPair,
       currentCollision: this.findAnyCollision(),
+      shelfX: this.shelfGroup.position.x,
+      selectedWorld: selectedWorld.toArray(),
+      selectedScale: selectedScale.toArray(),
+      selectedBounds: {
+        min: selectedBounds.min.toArray(),
+        max: selectedBounds.max.toArray(),
+      },
+      cameraPosition: this.camera.position.toArray(),
+      cameraTarget: this.controls.target.toArray(),
       canvas: {
         width: this.canvas.width,
         height: this.canvas.height,

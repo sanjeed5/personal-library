@@ -1,6 +1,7 @@
 import '@fontsource-variable/inter';
 import '@fontsource-variable/newsreader';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { catalog, type CatalogBook, type ReadingStatus } from './catalog';
 import { ShelfEngine, type ShelfMode } from './ShelfEngine';
 import { siteConfig } from './site-config';
@@ -85,7 +86,7 @@ export default function InteractiveLibrary() {
             setSelectedIndex(index);
           },
           onStatus: setStatus,
-          onReady: () => setReady(true),
+          onReady: () => flushSync(() => setReady(true)),
         });
         engineRef.current = engine;
       } catch {
@@ -235,7 +236,7 @@ export default function InteractiveLibrary() {
       </aside>
 
       <div className="experience-status" role="status" aria-live="polite"><span className="experience-status__dot" /><span>{status}</span></div>
-      <div className="loading-screen" aria-hidden={ready}><div className="loading-screen__mark"><span /><span /><span /></div><p>Assembling {catalog.length} volumes</p></div>
+      <div className="loading-screen" aria-hidden={ready}><div className="loading-screen__mark"><span /><span /><span /></div><p>Opening the shelf</p></div>
       <p className="independent-note">{siteConfig.independentNote}</p>
       <div className="sr-only" aria-live="polite">{isFocused && selectedBook ? `Inspecting ${selectedBook.title} by ${selectedBook.author}.` : `Selected ${activeBook.title} by ${activeBook.author}.`}</div>
     </main>
