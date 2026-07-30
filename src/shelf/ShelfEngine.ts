@@ -75,7 +75,8 @@ const shelfColor = new THREE.Color("#5a4132");
 const clamp = THREE.MathUtils.clamp;
 const focusInDuration = 0.46;
 const focusOutDuration = 0.34;
-const initialDetailedBooks = 6;
+const desktopInitialDetailedBooks = 6;
+const mobileInitialDetailedBooks = 3;
 const desktopDetailWidthRatio = 0.41;
 const compactDetailWidthRatio = 0.48;
 const desktopDetailMaxWidth = 620;
@@ -343,6 +344,10 @@ export class ShelfEngine {
   private createBooks() {
     let cursor = 0;
     const gap = 0.045;
+    const detailedBookCount =
+      window.innerWidth < 760
+        ? mobileInitialDetailedBooks
+        : desktopInitialDetailedBooks;
 
     this.motionLayout = createMotionLayout(
       this.booksData.map((book, index) => ({
@@ -353,7 +358,7 @@ export class ShelfEngine {
 
     this.booksData.forEach((book, index) => {
       cursor += book.thickness * 0.5;
-      const runtime = index < initialDetailedBooks
+      const runtime = index < detailedBookCount
         ? this.createBook(book, index, cursor)
         : this.createPlaceholderBook(book, index, cursor);
       this.runtimeBooks.push(runtime);

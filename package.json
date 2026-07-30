@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "build:github-pages": "SITE_URL=https://sanjeed5.github.io BASE_PATH=/personal-library/ astro build",
     "preview": "astro preview",
     "check": "astro check",
     "import:goodreads": "node scripts/import-goodreads.mjs",
