@@ -40,6 +40,7 @@ function BookResult({ book, onChoose }: { book: CatalogBook; onChoose: () => voi
 
 export default function InteractiveLibrary() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const closeDetailsRef = useRef<HTMLButtonElement>(null);
   const engineRef = useRef<ShelfEngine | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -115,6 +116,23 @@ export default function InteractiveLibrary() {
     return () => document.removeEventListener('keydown', focusSearch);
   }, []);
 
+  useEffect(() => {
+    if (mode !== 'inspect') return;
+    const frame = requestAnimationFrame(() => closeDetailsRef.current?.focus({ preventScroll: true }));
+    return () => cancelAnimationFrame(frame);
+  }, [mode]);
+
+  useEffect(() => {
+    if (!isFocused) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      engineRef.current?.returnToShelf();
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [isFocused]);
+
   function chooseBook(index: number, inspect = true) {
     setCatalogOpen(false);
     setQuery('');
@@ -139,7 +157,7 @@ export default function InteractiveLibrary() {
         data-testid="shelf-canvas"
         role="application"
         tabIndex={0}
-        aria-label={`Interactive three-dimensional shelf of ${catalog.length} books. Drag, scroll, or use arrow keys to browse. Press Enter to inspect.`}
+        aria-label={`Interactive three-dimensional shelf of ${catalog.length} books. Drag, scroll, or use arrow keys to browse. Click a book or press Enter to open its details.`}
       />
 
       <header className="shelf-header">
@@ -187,9 +205,6 @@ export default function InteractiveLibrary() {
         <p className="book-status-label">{statusLabels[activeBook.status]}{activeBook.rating ? ` · ★ ${activeBook.rating}` : ''}</p>
         <h1>{activeBook.shortTitle}</h1>
         <p className="browse-caption__author">{activeBook.author}</p>
-        <button type="button" className="inspect-button" data-testid="inspect-active" disabled={isFocused} onClick={() => engineRef.current?.focusBook(activeIndex)}>
-          <span>Pull from shelf</span><span aria-hidden="true">↗</span>
-        </button>
       </section>
 
       <button type="button" className="shelf-arrow shelf-arrow--left" data-testid="browse-previous" aria-label="Previous matching book" disabled={isFocused || filteredIndexes.length === 0} onClick={() => browseFiltered(-1)}><ArrowIcon direction="left" /></button>
@@ -200,13 +215,15 @@ export default function InteractiveLibrary() {
           <span className="sr-only">Shelf position</span>
           <input type="range" min="0" max={catalog.length - 1} value={activeIndex} disabled={isFocused} onChange={(event) => engineRef.current?.browseTo(Number(event.target.value))} />
         </label>
-        <div className="input-hint" aria-hidden="true"><span>DRAG</span><i /><span>SCROLL</span><i /><span>ARROW KEYS</span></div>
+        <div className="input-hint" aria-hidden="true"><span>CLICK FOR DETAILS</span><i /><span>DRAG TO BROWSE</span><i /><span>SCROLL</span></div>
       </nav>
 
       <aside className="book-details" aria-hidden={!isFocused} aria-label={selectedBook ? `Details for ${selectedBook.title}` : 'Book details'} data-testid="book-details">
         {selectedBook ? <div className="book-details__inner">
-          <button type="button" className="back-button" data-testid="return-to-shelf" onClick={() => engineRef.current?.returnToShelf()}><ArrowIcon direction="left" /><span>Return to shelf</span></button>
-          <div className="book-details__position"><span>{String(selectedIndex! + 1).padStart(3, '0')}</span><span>{String(catalog.length).padStart(3, '0')}</span></div>
+          <div className="book-details__toolbar">
+            <button ref={closeDetailsRef} type="button" className="details-close" data-testid="return-to-shelf" onClick={() => engineRef.current?.returnToShelf()}><span aria-hidden="true">×</span><span>Close details</span></button>
+            <div className="book-details__position"><span>{String(selectedIndex! + 1).padStart(3, '0')}</span><span>{String(catalog.length).padStart(3, '0')}</span></div>
+          </div>
           <div className="book-details__copy">
             <p className="eyebrow">{statusLabels[selectedBook.status]}</p>
             <h2>{selectedBook.title}</h2>
@@ -220,7 +237,6 @@ export default function InteractiveLibrary() {
             </dl>
             <a className="official-link" data-testid="official-link" href={`${baseUrl}/books/${selectedBook.slug}/`}><span>Open full details</span><span aria-hidden="true">↗</span></a>
           </div>
-          <div className="focus-controls" aria-label="Inspection controls"><span>Drag to orbit</span><span>Pinch or scroll to zoom</span><button type="button" data-testid="reset-view" onClick={() => engineRef.current?.resetFocusView()}>Reset view</button></div>
         </div> : null}
       </aside>
 

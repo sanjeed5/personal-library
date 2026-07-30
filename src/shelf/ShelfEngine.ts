@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
 import type { CatalogBook } from "./catalog";
@@ -166,7 +165,6 @@ export class ShelfEngine {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
   private camera: THREE.PerspectiveCamera;
-  private controls: OrbitControls;
   private shelfGroup = new THREE.Group();
   private shelfFurniture = new THREE.Group();
   private runtimeBooks: RuntimeBook[] = [];
@@ -239,18 +237,6 @@ export class ShelfEngine {
     this.camera = new THREE.PerspectiveCamera(27, 1, 0.08, 80);
     this.camera.position.copy(browseCamera);
     this.camera.lookAt(browseTarget);
-
-    this.controls = new OrbitControls(this.camera, this.canvas);
-    this.controls.enabled = false;
-    this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.075;
-    this.controls.enablePan = true;
-    this.controls.screenSpacePanning = true;
-    this.controls.enableZoom = true;
-    this.controls.minDistance = 2.7;
-    this.controls.maxDistance = 7.2;
-    this.controls.minPolarAngle = Math.PI * 0.22;
-    this.controls.maxPolarAngle = Math.PI * 0.78;
 
     this.resizeObserver = new ResizeObserver(this.handleResize);
     this.setupScene();
@@ -815,10 +801,6 @@ export class ShelfEngine {
       this.returnToShelf();
       return;
     }
-    if ((event.key === "r" || event.key === "R") && this.mode === "inspect") {
-      this.resetFocusView();
-      return;
-    }
     if (this.mode !== "browse") return;
 
     if (event.key === "ArrowRight") {
@@ -1028,7 +1010,6 @@ export class ShelfEngine {
     this.updateState(delta, timestamp);
     this.updateBooks(delta, elapsed);
 
-    if (this.controls.enabled) this.controls.update();
     this.renderer.render(this.scene, this.camera);
     if (firstFrame) {
       this.hasSignaledReady = true;
@@ -1090,8 +1071,6 @@ export class ShelfEngine {
       this.updateFocusCamera(delta);
       if (this.focusProgress >= 1) {
         this.mode = "inspect";
-        this.controls.enabled = true;
-        this.controls.target.copy(this.focusCameraTarget);
         this.callbacks.onMode(this.mode, this.selectedIndex);
         if (this.selectedIndex !== null) {
           this.callbacks.onStatus(
@@ -1100,7 +1079,6 @@ export class ShelfEngine {
         }
       }
     } else if (this.mode === "returning") {
-      this.controls.enabled = false;
       this.focusProgress = clamp(
         this.focusProgress -
           delta / (this.reducedMotion ? 0.08 : focusOutDuration),
@@ -1178,8 +1156,7 @@ export class ShelfEngine {
       book.content.visible = !isolated || isSelected;
       book.content.position.y = isSelected ? motionFocus * 0.04 : 0;
 
-      const idleTarget =
-        isSelected && this.mode === "inspect" && !this.reducedMotion ? 1 : 0;
+      const idleTarget = 0;
       book.idleAmount = damp(book.idleAmount, idleTarget, 5, delta);
       const idleStrength = isSelected ? book.idleAmount : 0;
       const idlePhase = elapsed * 0.78 + book.index * 0.37;
@@ -1253,7 +1230,7 @@ export class ShelfEngine {
     }
 
     // Shift the composition through an asymmetric frustum. The camera and
-    // OrbitControls can then keep the exact center of the book as their target.
+    // The camera can then keep the exact center of the book as its target.
     this.camera.setViewOffset(
       width,
       height,
@@ -1581,32 +1558,25 @@ export class ShelfEngine {
       presentedBookPose(this.motionLayout),
       false,
     );
-    this.pendingFocusIndex = next;
-    this.beginFocus(next);
+    this.pendingFocusIndex = null;
+    this.selectedIndex = next;
+    this.focusProgress = 0;
+    this.mode = "inspect";
+    this.callbacks.onMode(this.mode, next);
+    this.callbacks.onStatus(
+      `Viewing details for ${this.runtimeBooks[next].data.shortTitle}`,
+    );
   }
 
   returnToShelf() {
-    if (this.mode === "browse" && this.pendingFocusIndex !== null) {
-      this.pendingFocusIndex = null;
-      this.callbacks.onStatus("Opening cancelled");
-      return;
-    }
-    if (this.mode === "browse" || this.mode === "returning") return;
-    this.controls.enabled = false;
-    this.mode = "returning";
-    this.callbacks.onMode(this.mode, this.selectedIndex);
-    this.callbacks.onStatus("Returning to the complete shelf");
-  }
-
-  resetFocusView() {
-    if (this.mode !== "inspect" || this.selectedIndex === null) return;
-    const selected = this.runtimeBooks[this.selectedIndex];
-    const worldPosition = new THREE.Vector3();
-    selected.content.getWorldPosition(worldPosition);
-    this.frameFocusedBook(worldPosition);
-    this.controls.target.copy(this.focusCameraTarget);
-    this.camera.position.copy(this.focusCameraPosition);
-    this.controls.update();
+    if (this.mode === "browse") return;
+    this.pendingFocusIndex = null;
+    this.selectedIndex = null;
+    this.focusProgress = 0;
+    this.mode = "browse";
+    this.callbacks.onMode(this.mode, null);
+    this.callbacks.onStatus(`${this.booksData.length} volumes ready`);
+    this.canvas.focus({ preventScroll: true });
   }
 
   private findAnyCollision(): [string, string] | null {
@@ -1667,7 +1637,7 @@ export class ShelfEngine {
         max: selectedBounds.max.toArray(),
       },
       cameraPosition: this.camera.position.toArray(),
-      cameraTarget: this.controls.target.toArray(),
+      cameraTarget: this.focusCameraTarget.toArray(),
       canvas: {
         width: this.canvas.width,
         height: this.canvas.height,
@@ -1681,7 +1651,6 @@ export class ShelfEngine {
     this.isDisposed = true;
     cancelAnimationFrame(this.animationFrame);
     this.resizeObserver.disconnect();
-    this.controls.dispose();
     this.canvas.removeEventListener("wheel", this.handleWheel);
     this.canvas.removeEventListener("pointerdown", this.handlePointerDown);
     this.canvas.removeEventListener("pointermove", this.handlePointerMove);
