@@ -41,6 +41,7 @@ function BookResult({ book, onChoose }: { book: CatalogBook; onChoose: () => voi
 export default function InteractiveLibrary() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const closeDetailsRef = useRef<HTMLButtonElement>(null);
+  const closeTimerRef = useRef<number | null>(null);
   const engineRef = useRef<ShelfEngine | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -50,6 +51,7 @@ export default function InteractiveLibrary() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const [catalogOpen, setCatalogOpen] = useState(false);
+  const [spreadOpen, setSpreadOpen] = useState(false);
 
   const activeBook = catalog[activeIndex];
   const selectedBook = selectedIndex === null ? null : catalog[selectedIndex];
@@ -117,21 +119,44 @@ export default function InteractiveLibrary() {
   }, []);
 
   useEffect(() => {
-    if (mode !== 'inspect') return;
-    const frame = requestAnimationFrame(() => closeDetailsRef.current?.focus({ preventScroll: true }));
-    return () => cancelAnimationFrame(frame);
-  }, [mode]);
+    if (mode !== 'inspect') {
+      setSpreadOpen(false);
+      return;
+    }
+
+    setSpreadOpen(false);
+    const openFrame = requestAnimationFrame(() => {
+      setSpreadOpen(true);
+      requestAnimationFrame(() => closeDetailsRef.current?.focus({ preventScroll: true }));
+    });
+    return () => cancelAnimationFrame(openFrame);
+  }, [mode, selectedIndex]);
+
+  useEffect(() => () => {
+    if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current);
+  }, []);
 
   useEffect(() => {
     if (!isFocused) return;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       event.preventDefault();
-      engineRef.current?.returnToShelf();
+      closeBook();
     };
     document.addEventListener('keydown', closeOnEscape);
     return () => document.removeEventListener('keydown', closeOnEscape);
-  }, [isFocused]);
+  }, [isFocused, spreadOpen]);
+
+  function closeBook() {
+    if (!isFocused || closeTimerRef.current !== null) return;
+    setSpreadOpen(false);
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    closeTimerRef.current = window.setTimeout(() => {
+      closeTimerRef.current = null;
+      engineRef.current?.returnToShelf();
+      canvasRef.current?.focus({ preventScroll: true });
+    }, reduceMotion ? 0 : 240);
+  }
 
   function chooseBook(index: number, inspect = true) {
     setCatalogOpen(false);
@@ -150,7 +175,7 @@ export default function InteractiveLibrary() {
   }
 
   return (
-    <main className={`press-experience ${ready ? 'is-ready' : ''} ${isFocused ? 'is-focused' : 'is-browsing'} ${catalogOpen ? 'has-catalog-open' : ''}`}>
+    <main className={`press-experience ${ready ? 'is-ready' : ''} ${isFocused ? 'is-focused' : 'is-browsing'} ${spreadOpen ? 'is-spread-open' : ''} ${catalogOpen ? 'has-catalog-open' : ''}`}>
       <canvas
         ref={canvasRef}
         className="shelf-canvas"
@@ -218,25 +243,45 @@ export default function InteractiveLibrary() {
         <div className="input-hint" aria-hidden="true"><span>CLICK FOR DETAILS</span><i /><span>DRAG TO BROWSE</span><i /><span>SCROLL</span></div>
       </nav>
 
-      <aside className="book-details" aria-hidden={!isFocused} aria-label={selectedBook ? `Details for ${selectedBook.title}` : 'Book details'} data-testid="book-details">
-        {selectedBook ? <div className="book-details__inner">
+      <aside className="book-details" aria-hidden={!isFocused} aria-label={selectedBook ? `Open book details for ${selectedBook.title}` : 'Book details'} data-testid="book-details">
+        {selectedBook ? <div className="open-book-frame">
           <div className="book-details__toolbar">
-            <button ref={closeDetailsRef} type="button" className="details-close" data-testid="return-to-shelf" onClick={() => engineRef.current?.returnToShelf()}><span aria-hidden="true">×</span><span>Close details</span></button>
+            <button ref={closeDetailsRef} type="button" className="details-close" data-testid="return-to-shelf" onClick={closeBook}><span aria-hidden="true">×</span><span>Close book</span></button>
             <div className="book-details__position"><span>{String(selectedIndex! + 1).padStart(3, '0')}</span><span>{String(catalog.length).padStart(3, '0')}</span></div>
           </div>
-          <div className="book-details__copy">
-            <p className="eyebrow">{statusLabels[selectedBook.status]}</p>
-            <h2>{selectedBook.title}</h2>
-            <p className="book-details__author">{selectedBook.author}</p>
-            {selectedBook.series ? <p className="book-details__series">{selectedBook.series}{selectedBook.seriesPosition ? `, book ${selectedBook.seriesPosition}` : ''}</p> : null}
-            <p className="book-details__description">{selectedBook.description}</p>
-            <dl>
-              {selectedBook.rating ? <div><dt>My rating</dt><dd>★ {selectedBook.rating} / 5</dd></div> : null}
-              {selectedBook.pages ? <div><dt>Length</dt><dd>{selectedBook.pages} pages</dd></div> : null}
-              {selectedBook.publishedYear ? <div><dt>Published</dt><dd>{selectedBook.publishedYear}</dd></div> : null}
-            </dl>
-            <a className="official-link" data-testid="official-link" href={`${baseUrl}/books/${selectedBook.slug}/`}><span>Open full details</span><span aria-hidden="true">↗</span></a>
-          </div>
+          <article className="open-book" style={{ '--book-cloth': selectedBook.cover, '--book-accent': selectedBook.accent } as React.CSSProperties}>
+            <section className="open-book__page open-book__page--left" aria-label="Book identity">
+              <div className="open-book__page-content">
+                <div className="open-book__page-number">{String(selectedIndex! + 1).padStart(3, '0')}</div>
+                <p className="eyebrow">{statusLabels[selectedBook.status]}</p>
+                <div className="open-book__identity">
+                  <div className="open-book__cover" style={{ background: selectedBook.cover }}>
+                    {selectedBook.coverImage ? <img src={selectedBook.coverImage} alt="" loading="lazy" /> : <span>{selectedBook.shortTitle}</span>}
+                  </div>
+                  <div>
+                    <h2>{selectedBook.title}</h2>
+                    <p className="book-details__author">{selectedBook.author}</p>
+                    {selectedBook.series ? <p className="book-details__series">{selectedBook.series}{selectedBook.seriesPosition ? `, book ${selectedBook.seriesPosition}` : ''}</p> : null}
+                  </div>
+                </div>
+                <dl>
+                  {selectedBook.rating ? <div><dt>My rating</dt><dd>★ {selectedBook.rating} / 5</dd></div> : null}
+                  {selectedBook.pages ? <div><dt>Length</dt><dd>{selectedBook.pages} pages</dd></div> : null}
+                  {selectedBook.publishedYear ? <div><dt>Published</dt><dd>{selectedBook.publishedYear}</dd></div> : null}
+                </dl>
+              </div>
+            </section>
+            <div className="open-book__gutter" aria-hidden="true" />
+            <section className="open-book__page open-book__page--right" aria-label="Book description and notes">
+              <div className="open-book__page-content open-book__page-content--right">
+                <div className="open-book__page-number">{String(selectedIndex! + 2).padStart(3, '0')}</div>
+                <p className="open-book__chapter">About this book</p>
+                <p className="book-details__description">{selectedBook.description}</p>
+                {selectedBook.quote ? <blockquote><p>{selectedBook.quote}</p><cite>{selectedBook.quoteBy}</cite></blockquote> : null}
+                <a className="official-link" data-testid="official-link" href={`${baseUrl}/books/${selectedBook.slug}/`}><span>Open full details</span><span aria-hidden="true">↗</span></a>
+              </div>
+            </section>
+          </article>
         </div> : null}
       </aside>
 
@@ -254,7 +299,7 @@ export default function InteractiveLibrary() {
       <div className="experience-status" role="status" aria-live="polite"><span className="experience-status__dot" /><span>{status}</span></div>
       <div className="loading-screen" aria-hidden={ready}><div className="loading-screen__mark"><span /><span /><span /></div><p>Opening the shelf</p></div>
       <p className="independent-note">{siteConfig.independentNote}</p>
-      <div className="sr-only" aria-live="polite">{isFocused && selectedBook ? `Inspecting ${selectedBook.title} by ${selectedBook.author}.` : `Selected ${activeBook.title} by ${activeBook.author}.`}</div>
+      <div className="sr-only" aria-live="polite">{isFocused && selectedBook ? `${selectedBook.title} by ${selectedBook.author} is open to its details spread.` : `Selected ${activeBook.title} by ${activeBook.author}.`}</div>
     </main>
   );
 }
