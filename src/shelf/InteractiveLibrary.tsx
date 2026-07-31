@@ -191,14 +191,16 @@ export default function InteractiveLibrary() {
 
   function scrollBookPage(event: WheelEvent<HTMLDivElement>) {
     const page = event.currentTarget;
+    const currentScrollTop = page.scrollTop;
     const nextScrollTop = Math.max(0, Math.min(
       page.scrollHeight - page.clientHeight,
-      page.scrollTop + event.deltaY,
+      currentScrollTop + event.deltaY,
     ));
     event.stopPropagation();
-    if (nextScrollTop === page.scrollTop) return;
-    event.preventDefault();
-    page.scrollTop = nextScrollTop;
+    if (nextScrollTop === currentScrollTop) return;
+    requestAnimationFrame(() => {
+      if (page.scrollTop === currentScrollTop) page.scrollTop = nextScrollTop;
+    });
   }
 
   return (
