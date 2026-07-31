@@ -1,6 +1,6 @@
 import '@fontsource-variable/inter';
 import '@fontsource-variable/newsreader';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type WheelEvent } from 'react';
 import { flushSync } from 'react-dom';
 import { catalog, type CatalogBook, type ReadingStatus } from './catalog';
 import { ShelfEngine, type ShelfMode } from './ShelfEngine';
@@ -42,6 +42,7 @@ export default function InteractiveLibrary() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const closeDetailsRef = useRef<HTMLButtonElement>(null);
   const closeTimerRef = useRef<number | null>(null);
+  const coverPreloadsRef = useRef(new Map<string, HTMLImageElement>());
   const engineRef = useRef<ShelfEngine | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -56,6 +57,20 @@ export default function InteractiveLibrary() {
   const activeBook = catalog[activeIndex];
   const selectedBook = selectedIndex === null ? null : catalog[selectedIndex];
   const isFocused = mode !== 'browse';
+
+  useEffect(() => {
+    const coverImage = activeBook.coverImage;
+    if (!coverImage || coverPreloadsRef.current.has(coverImage)) return;
+
+    const preloadTimer = window.setTimeout(() => {
+      const image = new Image();
+      image.decoding = 'async';
+      image.src = coverImage;
+      coverPreloadsRef.current.set(coverImage, image);
+    }, 80);
+
+    return () => window.clearTimeout(preloadTimer);
+  }, [activeBook.coverImage]);
 
   const filteredIndexes = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -174,6 +189,18 @@ export default function InteractiveLibrary() {
     engineRef.current?.browseTo(filteredIndexes[nextPosition]);
   }
 
+  function scrollBookPage(event: WheelEvent<HTMLDivElement>) {
+    const page = event.currentTarget;
+    const nextScrollTop = Math.max(0, Math.min(
+      page.scrollHeight - page.clientHeight,
+      page.scrollTop + event.deltaY,
+    ));
+    event.stopPropagation();
+    if (nextScrollTop === page.scrollTop) return;
+    event.preventDefault();
+    page.scrollTop = nextScrollTop;
+  }
+
   return (
     <main className={`press-experience ${ready ? 'is-ready' : ''} ${isFocused ? 'is-focused' : 'is-browsing'} ${spreadOpen ? 'is-spread-open' : ''} ${catalogOpen ? 'has-catalog-open' : ''}`}>
       <canvas
@@ -251,7 +278,7 @@ export default function InteractiveLibrary() {
           </div>
           <article className="open-book" style={{ '--book-cloth': selectedBook.cover, '--book-accent': selectedBook.accent } as React.CSSProperties}>
             <section className="open-book__page open-book__page--left" aria-label="Book identity">
-              <div className="open-book__page-content">
+              <div className="open-book__page-content" onWheel={scrollBookPage}>
                 <div className="open-book__page-number">{String(selectedIndex! + 1).padStart(3, '0')}</div>
                 <p className="eyebrow">{statusLabels[selectedBook.status]}</p>
                 <div className="open-book__identity">
@@ -273,7 +300,7 @@ export default function InteractiveLibrary() {
             </section>
             <div className="open-book__gutter" aria-hidden="true" />
             <section className="open-book__page open-book__page--right" aria-label="Book description and notes">
-              <div className="open-book__page-content open-book__page-content--right">
+              <div className="open-book__page-content open-book__page-content--right" onWheel={scrollBookPage}>
                 <div className="open-book__page-number">{String(selectedIndex! + 2).padStart(3, '0')}</div>
                 <p className="open-book__chapter">About this book</p>
                 <p className="book-details__description">{selectedBook.description}</p>

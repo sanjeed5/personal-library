@@ -411,6 +411,7 @@ canvas:focus-visible {
   padding: clamp(76px, 9vh, 110px) clamp(26px, 5vw, 76px) clamp(42px, 6vh, 72px);
   opacity: 0;
   pointer-events: none;
+  overscroll-behavior: contain;
   perspective: 1800px;
   transition: opacity 180ms cubic-bezier(0.23, 1, 0.32, 1);
 }
@@ -531,6 +532,7 @@ canvas:focus-visible {
 
 .open-book__page {
   position: relative;
+  min-height: 0;
   min-width: 0;
   overflow: hidden;
   backface-visibility: hidden;
@@ -589,8 +591,13 @@ canvas:focus-visible {
   position: relative;
   z-index: 1;
   height: 100%;
+  min-height: 0;
+  max-height: 100%;
   padding: clamp(34px, 4.4vh, 52px) clamp(28px, 3.2vw, 48px) clamp(26px, 3.8vh, 42px);
   overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: rgba(65,48,31,0.24) transparent;
 }
