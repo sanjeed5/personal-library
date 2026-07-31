@@ -441,6 +441,7 @@ canvas:focus-visible {
 
 .is-spread-open .open-book-frame {
   transform: translate3d(0, 0, 0) scale(1);
+  transition-duration: 480ms;
 }
 
 .book-details__toolbar {
@@ -462,6 +463,7 @@ canvas:focus-visible {
 .is-spread-open .book-details__toolbar {
   opacity: 1;
   transform: translate3d(0, 0, 0);
+  transition-delay: 260ms;
 }
 
 .details-close {
@@ -572,6 +574,7 @@ canvas:focus-visible {
 
 .is-spread-open .open-book__page {
   transform: rotateY(0deg);
+  transition-duration: 620ms, 200ms;
 }
 
 .open-book__gutter {
