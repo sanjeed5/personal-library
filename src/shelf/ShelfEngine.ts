@@ -712,7 +712,6 @@ export class ShelfEngine {
 
   private handleWheel = (event: WheelEvent) => {
     if (this.mode !== "browse") return;
-    event.preventDefault();
     this.pendingFocusIndex = null;
     const dominant =
       Math.abs(event.deltaX) > Math.abs(event.deltaY)
