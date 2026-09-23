@@ -1,9 +1,9 @@
 export const siteConfig = {
   title: "Sanjeed's Library, an interactive 3D bookshelf",
   applicationName: "Sanjeed's Library",
-  description: 'Explore a personal reading library as one continuous, tactile 3D shelf.',
+  description: 'Browse a personal reading library as a dense cover grid, with an optional 3D shelf.',
   wordmark: "SANJEED'S LIBRARY",
-  collectionName: 'A READING LIFE IN 3D',
+  collectionName: 'A READING LIFE',
   editionEyebrow: 'PERSONAL LIBRARY',
   coverImprint: "SANJEED'S LIBRARY",
   coverTagline: 'BOOKS WORTH KEEPING CLOSE',
@@ -11,5 +11,5 @@ export const siteConfig = {
   bookLinkLabel: 'Open book details',
   socialImageAlt: 'A warm, tactile 3D bookshelf from Sanjeed’s personal library.',
   enableOptionalStripeArchive: false,
-  independentNote: 'Drag, scroll, use arrow keys, or search the shelf.',
+  independentNote: 'Scroll the grid, filter by status, or switch to the 3D shelf.',
 } as const;
