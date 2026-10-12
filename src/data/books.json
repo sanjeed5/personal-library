@@ -6491,5 +6491,31 @@
       "Historical",
       "Biography"
     ]
+  },
+  {
+    "id": "iron-gold-pierce-brown",
+    "slug": "iron-gold-pierce-brown",
+    "title": "Iron Gold",
+    "author": "Pierce Brown",
+    "additionalAuthors": [],
+    "series": "Red Rising",
+    "seriesPosition": 4,
+    "publisher": "Del Rey",
+    "format": "Kindle Edition",
+    "shelves": [],
+    "mediaType": "book",
+    "status": "currently-reading",
+    "pages": 672,
+    "publishedYear": 2018,
+    "dateAdded": "2026-10-13",
+    "visibility": true,
+    "featured": false,
+    "coverUrl": "https://covers.openlibrary.org/b/id/14511722-L.jpg",
+    "openLibraryUrl": "https://openlibrary.org/works/OL19726995W",
+    "subjects": [
+      "Science fiction",
+      "Dystopia",
+      "Space opera"
+    ]
   }
 ]
