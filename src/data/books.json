@@ -6504,7 +6504,7 @@
     "format": "Kindle Edition",
     "shelves": [],
     "mediaType": "book",
-    "status": "currently-reading",
+    "status": "read",
     "pages": 672,
     "publishedYear": 2018,
     "dateAdded": "2026-10-13",
@@ -6516,6 +6516,7 @@
       "Science fiction",
       "Dystopia",
       "Space opera"
-    ]
+    ],
+    "dateFinished": "2026-10-15"
   }
 ]
