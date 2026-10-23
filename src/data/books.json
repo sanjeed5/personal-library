@@ -6518,5 +6518,32 @@
       "Space opera"
     ],
     "dateRead": "2026-10-15"
+  },
+  {
+    "id": "dark-age-pierce-brown",
+    "slug": "dark-age-pierce-brown",
+    "title": "Dark Age",
+    "author": "Pierce Brown",
+    "additionalAuthors": [],
+    "series": "Red Rising",
+    "seriesPosition": 5,
+    "publisher": "Del Rey",
+    "format": "Kindle Edition",
+    "shelves": [],
+    "mediaType": "book",
+    "status": "read",
+    "pages": 800,
+    "publishedYear": 2019,
+    "dateAdded": "2026-10-15",
+    "visibility": true,
+    "featured": false,
+    "coverUrl": "https://covers.openlibrary.org/b/id/8748017-L.jpg",
+    "openLibraryUrl": "https://openlibrary.org/works/OL20072759W",
+    "subjects": [
+      "Science fiction",
+      "Dystopia",
+      "Space opera"
+    ],
+    "dateRead": "2026-10-23"
   }
 ]
