@@ -6545,5 +6545,31 @@
       "Space opera"
     ],
     "dateRead": "2026-10-23"
+  },
+  {
+    "id": "light-bringer-pierce-brown",
+    "slug": "light-bringer-pierce-brown",
+    "title": "Light Bringer",
+    "author": "Pierce Brown",
+    "additionalAuthors": [],
+    "series": "Red Rising",
+    "seriesPosition": 6,
+    "publisher": "Del Rey",
+    "format": "Kindle Edition",
+    "shelves": [],
+    "mediaType": "book",
+    "status": "currently-reading",
+    "pages": 704,
+    "publishedYear": 2023,
+    "dateAdded": "2026-10-24",
+    "visibility": true,
+    "featured": false,
+    "coverUrl": "https://covers.openlibrary.org/b/id/15157697-L.jpg",
+    "openLibraryUrl": "https://openlibrary.org/works/OL26353967W",
+    "subjects": [
+      "Science fiction",
+      "Dystopia",
+      "Space opera"
+    ]
   }
 ]
