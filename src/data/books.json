@@ -6572,5 +6572,28 @@
       "Space opera"
     ],
     "dateRead": "2026-10-29"
+  },
+  {
+    "id": "ra-qntm",
+    "slug": "ra-qntm",
+    "title": "Ra",
+    "author": "qntm",
+    "additionalAuthors": [],
+    "shelves": [],
+    "mediaType": "book",
+    "status": "want-to-read",
+    "pages": 541,
+    "publishedYear": 2016,
+    "dateAdded": "2026-11-18",
+    "visibility": true,
+    "featured": false,
+    "coverUrl": "https://covers.openlibrary.org/b/id/11457994-L.jpg",
+    "openLibraryUrl": "https://openlibrary.org/works/OL24726933W",
+    "description": "Magic is real, and it's been turned into a rigorous engineering discipline. Laura Ferno, a graduate student of magic, wants to finish what her mother started and get humanity into space using it. Free to read online at https://qntm.org/ra.",
+    "subjects": [
+      "Science fiction",
+      "Hard science fiction",
+      "Magic"
+    ]
   }
 ]
