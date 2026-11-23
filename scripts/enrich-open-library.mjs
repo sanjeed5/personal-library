@@ -10,7 +10,7 @@ const booksPath = process.env.BOOKS_FILE
 const refresh = process.argv.includes('--refresh');
 const limitIndex = process.argv.indexOf('--limit');
 const limit = limitIndex >= 0 ? Number(process.argv[limitIndex + 1]) : Infinity;
-const userAgent = 'sanjeed-library/0.1 (https://sanjeed.in; hi@sanjeed.in)';
+const userAgent = 'sanjeed-library/0.1 (https://sanjeed.in; hi@sanjeedm.com)';
 
 if (!Number.isFinite(limit) && limit !== Infinity) {
   console.error('--limit must be a number');
